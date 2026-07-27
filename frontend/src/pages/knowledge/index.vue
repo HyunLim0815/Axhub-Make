@@ -1,116 +1,107 @@
 <template>
   <div>
-    <n-page-header>
-      <template #title>产品知识库</template>
-      <template #extra>
-        <n-button type="primary" @click="openCreate">新增条目</n-button>
-      </template>
-    </n-page-header>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="margin:0">产品知识库</h2>
+      <el-button type="primary" @click="openCreate">新增条目</el-button>
+    </div>
 
-    <n-space class="mt-4">
-      <n-input v-model:value="searchQuery" placeholder="搜索知识库..." clearable style="width:300px" />
-      <n-select v-model:value="typeFilter" :options="typeOptions" clearable placeholder="类型" style="width:150px" />
-    </n-space>
+    <div style="margin-bottom:16px;display:flex;gap:12px">
+      <el-input v-model="searchQuery" placeholder="搜索知识库..." clearable style="width:300px" prefix-icon="Search" />
+      <el-select v-model="typeFilter" placeholder="类型" clearable style="width:140px">
+        <el-option label="术语" value="term" />
+        <el-option label="设计决策" value="decision" />
+        <el-option label="约束条件" value="constraint" />
+        <el-option label="用户反馈" value="user-feedback" />
+        <el-option label="设计规则" value="design-rule" />
+      </el-select>
+    </div>
 
-    <n-list class="mt-4">
-      <n-list-item v-for="entry in filteredEntries" :key="entry.id">
-        <template #prefix>
-          <n-tag :color="{ color: typeColor(entry.type) }">{{ typeLabel(entry.type) }}</n-tag>
+    <el-table :data="filteredEntries" stripe style="width:100%">
+      <el-table-column label="类型" width="100">
+        <template #default="{ row }">
+          <el-tag :color="typeColor(row.type)" size="small" effect="plain">{{ typeLabel(row.type) }}</el-tag>
         </template>
-        <n-thing :title="entry.title" :description="entry.content?.slice(0,200)">
-          <template #footer>
-            <n-space>
-              <n-tag v-for="tag in entry.tags" :key="tag" size="tiny">{{ tag }}</n-tag>
-            </n-space>
-          </template>
-        </n-thing>
-        <template #suffix>
-          <n-button size="tiny" quaternary @click="openEdit(entry)">编辑</n-button>
-          <n-button size="tiny" quaternary type="error" @click="handleDelete(entry.id)">删除</n-button>
+      </el-table-column>
+      <el-table-column prop="title" label="标题" />
+      <el-table-column prop="content" label="内容" show-overflow-tooltip />
+      <el-table-column label="标签" width="200">
+        <template #default="{ row }">
+          <el-tag v-for="tag in (row.tags||[])" :key="tag" size="small" style="margin-right:4px">{{ tag }}</el-tag>
         </template>
-      </n-list-item>
-      <n-empty v-if="!filteredEntries.length" description="暂无条目" style="padding:60px" />
-    </n-list>
+      </el-table-column>
+      <el-table-column label="操作" width="140" fixed="right">
+        <template #default="{ row }">
+          <el-button size="small" @click="openEdit(row)">编辑</el-button>
+          <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-empty v-if="!filteredEntries.length && !loading" description="暂无知识条目" />
 
-    <n-modal v-model:show="showModal" :title="editingId ? '编辑条目' : '新增条目'" style="width:600px">
-      <n-form>
-        <n-form-item label="类型">
-          <n-select v-model:value="form.type" :options="typeOptions" />
-        </n-form-item>
-        <n-form-item label="标题">
-          <n-input v-model:value="form.title" />
-        </n-form-item>
-        <n-form-item label="内容">
-          <n-input v-model:value="form.content" type="textarea" rows="6" />
-        </n-form-item>
-        <n-form-item label="标签">
-          <n-input v-model:value="form.tags" placeholder="逗号分隔" />
-        </n-form-item>
-      </n-form>
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑条目' : '新增条目'" width="600">
+      <el-form :model="form">
+        <el-form-item label="类型">
+          <el-select v-model="form.type">
+            <el-option label="术语" value="term" />
+            <el-option label="设计决策" value="decision" />
+            <el-option label="约束条件" value="constraint" />
+            <el-option label="用户反馈" value="user-feedback" />
+            <el-option label="设计规则" value="design-rule" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="标题" required>
+          <el-input v-model="form.title" />
+        </el-form-item>
+        <el-form-item label="内容" required>
+          <el-input v-model="form.content" type="textarea" :rows="6" />
+        </el-form-item>
+        <el-form-item label="标签">
+          <el-input v-model="form.tags" placeholder="逗号分隔" />
+        </el-form-item>
+      </el-form>
       <template #footer>
-        <n-space justify="end">
-          <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSave">保存</n-button>
-        </n-space>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSave">保存</el-button>
       </template>
-    </n-modal>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useMessage } from 'naive-ui'
+import { ElMessage } from 'element-plus'
 import { knowledgeApi } from '@/api'
+import { Search } from '@element-plus/icons-vue'
 
-const message = useMessage()
 const entries = ref<any[]>([])
 const searchQuery = ref('')
-const typeFilter = ref<string | null>(null)
-const showModal = ref(false)
+const typeFilter = ref('')
+const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
+const loading = ref(false)
 const form = reactive({ type: 'decision', title: '', content: '', tags: '' })
 
-const typeOptions = [
-  { label: '术语', value: 'term' },
-  { label: '设计决策', value: 'decision' },
-  { label: '约束条件', value: 'constraint' },
-  { label: '用户反馈', value: 'user-feedback' },
-  { label: '设计规则', value: 'design-rule' },
-]
-
-const typeLabel = (t: string) => typeOptions.find(o => o.value === t)?.label || t
-const typeColor = (t: string) => {
-  const map: Record<string, string> = { term: '#1677ff', decision: '#722ed1', constraint: '#fa8c16', 'user-feedback': '#52c41a', 'design-rule': '#eb2f96' }
-  return map[t] || '#999'
-}
+const typeLabel = (t: string) => ({ term:'术语', decision:'设计决策', constraint:'约束', 'user-feedback':'反馈', 'design-rule':'规则' })[t] || t
+const typeColor = (t: string) => ({ term:'#1677ff', decision:'#722ed1', constraint:'#fa8c16', 'user-feedback':'#52c41a', 'design-rule':'#eb2f96' })[t] || '#999'
 
 const filteredEntries = computed(() => {
   let list = entries.value
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter(e => e.title?.toLowerCase().includes(q) || e.content?.toLowerCase().includes(q))
-  }
+  if (searchQuery.value) { const q = searchQuery.value.toLowerCase(); list = list.filter(e => e.title?.toLowerCase().includes(q) || e.content?.toLowerCase().includes(q)) }
   if (typeFilter.value) list = list.filter(e => e.type === typeFilter.value)
   return list
 })
 
-async function load() {
-  const res = await knowledgeApi.list()
-  entries.value = res.data?.data || []
-}
-function openCreate() { editingId.value = null; form.type = 'decision'; form.title = ''; form.content = ''; form.tags = ''; showModal.value = true }
-function openEdit(entry: any) { editingId.value = entry.id; form.type = entry.type; form.title = entry.title; form.content = entry.content; form.tags = (entry.tags || []).join(', '); showModal.value = true }
+async function load() { loading.value = true; try { const r = await knowledgeApi.list(); entries.value = r.data?.data || [] } finally { loading.value = false } }
+function openCreate() { editingId.value = null; form.type = 'decision'; form.title = ''; form.content = ''; form.tags = ''; dialogVisible.value = true }
+function openEdit(row: any) { editingId.value = row.id; form.type = row.type; form.title = row.title; form.content = row.content; form.tags = (row.tags||[]).join(', '); dialogVisible.value = true }
 
 async function handleSave() {
-  const data = { type: form.type, title: form.title, content: form.content, tags: form.tags.split(',').map((s: string) => s.trim()).filter(Boolean) }
-  if (editingId.value) await knowledgeApi.update(editingId.value, data)
-  else await knowledgeApi.create(data)
-  showModal.value = false; message.success('已保存'); await load()
+  const data = { type: form.type, title: form.title, content: form.content, tags: form.tags.split(',').map((s:string) => s.trim()).filter(Boolean) }
+  if (editingId.value) await knowledgeApi.update(editingId.value, data); else await knowledgeApi.create(data)
+  dialogVisible.value = false; ElMessage.success('已保存'); await load()
 }
 
-async function handleDelete(id: number) {
-  await knowledgeApi.delete(id); message.success('已删除'); await load()
-}
+async function handleDelete(id: number) { await knowledgeApi.delete(id); ElMessage.success('已删除'); await load() }
 
 onMounted(load)
 </script>

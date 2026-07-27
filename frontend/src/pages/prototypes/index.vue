@@ -1,81 +1,83 @@
 <template>
   <div>
-    <n-page-header>
-      <template #title>原型列表</template>
-      <template #extra>
-        <n-button type="primary" @click="showCreate = true">新建原型</n-button>
-      </template>
-    </n-page-header>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="margin:0">原型</h2>
+      <el-button type="primary" @click="dialogVisible = true">新建原型</el-button>
+    </div>
 
-    <n-data-table
-      :columns="columns"
-      :data="prototypes"
-      :loading="loading"
-      :pagination="pagination"
-      class="mt-4"
+    <el-table :data="prototypes" v-loading="loading" stripe style="width:100%">
+      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column prop="name" label="名称" />
+      <el-table-column prop="description" label="描述" show-overflow-tooltip />
+      <el-table-column label="操作" width="160">
+        <template #default="{ row }">
+          <el-button size="small" @click="$router.push('/prototypes/' + row.id)">打开</el-button>
+          <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <el-pagination
+      v-if="total > 0"
+      v-model:current-page="page"
+      v-model:page-size="size"
+      :total="total"
+      layout="total, prev, pager, next"
+      style="margin-top:16px;justify-content:flex-end"
+      @current-change="load"
     />
 
-    <n-modal v-model:show="showCreate" title="新建原型">
-      <n-card style="width:480px" title="新建原型" closable @close="showCreate = false">
-        <n-form>
-          <n-form-item label="名称">
-            <n-input v-model:value="form.name" placeholder="原型名称" />
-          </n-form-item>
-          <n-form-item label="描述">
-            <n-input v-model:value="form.description" type="textarea" rows="3" />
-          </n-form-item>
-        </n-form>
-        <template #footer>
-          <n-space justify="end">
-            <n-button @click="showCreate = false">取消</n-button>
-            <n-button type="primary" @click="handleCreate">创建</n-button>
-          </n-space>
-        </template>
-      </n-card>
-    </n-modal>
+    <el-dialog v-model="dialogVisible" title="新建原型" width="480">
+      <el-form :model="form">
+        <el-form-item label="名称" required>
+          <el-input v-model="form.name" placeholder="原型名称" />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="form.description" type="textarea" :rows="3" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleCreate">创建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { NButton, useMessage } from 'naive-ui'
+import { onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { prototypeApi } from '@/api'
 
-const router = useRouter()
-const message = useMessage()
 const prototypes = ref<any[]>([])
 const loading = ref(false)
-const showCreate = ref(false)
+const dialogVisible = ref(false)
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
 const form = reactive({ name: '', description: '' })
-const pagination = reactive({ page: 1, pageSize: 10, pageCount: 1 })
-
-const columns = [
-  { title: 'ID', key: 'id', width: 60 },
-  { title: '名称', key: 'name' },
-  { title: '描述', key: 'description', ellipsis: true },
-  {
-    title: '操作', width: 120,
-    render(row: any) {
-      return h(NButton, { text, onClick: () => router.push(`/prototypes/${row.id}`) }, '打开')
-    },
-  },
-]
 
 async function load() {
   loading.value = true
   try {
-    const res = await prototypeApi.list(pagination.page, pagination.pageSize)
-    prototypes.value = res.data.data || []
-    pagination.pageCount = res.data.last_page || 1
+    const res = await prototypeApi.list(page.value, size.value)
+    prototypes.value = res.data?.data || []
+    total.value = res.data?.total || 0
   } finally { loading.value = false }
 }
 
 async function handleCreate() {
-  if (!form.name) { message.warning('请输入名称'); return }
-  await prototypeApi.create(form)
-  showCreate.value = false
+  if (!form.name) return ElMessage.warning('请输入名称')
+  await prototypeApi.create({ name: form.name, description: form.description })
+  dialogVisible.value = false
   form.name = ''; form.description = ''
+  ElMessage.success('创建成功')
+  await load()
+}
+
+async function handleDelete(id: number) {
+  await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
+  await prototypeApi.delete(id)
+  ElMessage.success('已删除')
   await load()
 }
 

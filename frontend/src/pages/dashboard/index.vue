@@ -1,45 +1,59 @@
 <template>
   <div>
-    <n-h2>项目概览</n-h2>
-    <n-grid :cols="3" :x-gap="16">
-      <n-grid-item>
-        <n-card title="原型" size="small">
-          <n-number-animation :from="0" :to="stats.prototypeCount" />
-          <template #footer><n-button text @click="$router.push('/prototypes')">查看全部 →</n-button></template>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card title="知识条目" size="small">
-          <n-number-animation :from="0" :to="stats.knowledgeCount" />
-          <template #footer><n-button text @click="$router.push('/knowledge')">查看全部 →</n-button></template>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card title="发布通道" size="small">
-          <n-number-animation :from="0" :to="stats.channelCount" />
-          <template #footer><n-button text @click="$router.push('/publish')">查看全部 →</n-button></template>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+    <h2 style="margin-bottom: 20px">项目概览</h2>
+    <el-row :gutter="16">
+      <el-col :span="8">
+        <el-card shadow="never">
+          <template #header><span>原型</span></template>
+          <div style="font-size: 32px; font-weight: 600; color: var(--el-color-primary)">{{ stats.prototypeCount }}</div>
+          <div style="margin-top: 12px">
+            <el-button link @click="$router.push('/prototypes')">查看全部 →</el-button>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="never">
+          <template #header><span>知识条目</span></template>
+          <div style="font-size: 32px; font-weight: 600; color: var(--el-color-success)">{{ stats.knowledgeCount }}</div>
+          <div style="margin-top: 12px">
+            <el-button link @click="$router.push('/knowledge')">查看全部 →</el-button>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="never">
+          <template #header><span>发布通道</span></template>
+          <div style="font-size: 32px; font-weight: 600; color: var(--el-color-warning)">{{ stats.channelCount }}</div>
+          <div style="margin-top: 12px">
+            <el-button link @click="$router.push('/publish')">查看全部 →</el-button>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <n-card title="发布通道状态" class="mt-4">
-      <n-table v-if="channels.length" :bordered="false">
-        <thead><tr><th>通道</th><th>类型</th><th>当前版本</th><th>状态</th></tr></thead>
-        <tbody>
-          <tr v-for="ch in channels" :key="ch.id">
-            <td>{{ ch.name }}</td><td>{{ ch.type }}</td><td>v{{ ch.current_version || '-' }}</td>
-            <td><n-tag :type="ch.status === 'published' ? 'success' : 'default'">{{ ch.status }}</n-tag></td>
-          </tr>
-        </tbody>
-      </n-table>
-      <n-empty v-else description="暂无通道" />
-    </n-card>
+    <el-card shadow="never" style="margin-top: 20px">
+      <template #header><span>发布通道状态</span></template>
+      <el-table :data="channels" v-if="channels.length" stripe style="width:100%">
+        <el-table-column prop="name" label="通道" />
+        <el-table-column prop="type" label="类型" />
+        <el-table-column prop="current_version" label="当前版本" width="120">
+          <template #default="{ row }">v{{ row.current_version || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'published' ? 'success' : 'info'" size="small">{{ row.status }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-else description="暂无通道" />
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { publishApi } from '@/api'
+import { Odometer, Promotion } from '@element-plus/icons-vue'
 
 const stats = reactive({ prototypeCount: 0, knowledgeCount: 0, channelCount: 0 })
 const channels = ref<any[]>([])
