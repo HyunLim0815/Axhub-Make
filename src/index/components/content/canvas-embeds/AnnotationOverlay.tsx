@@ -13,6 +13,7 @@ import {
     getCanvasDirectRunAnnotationTaskRef,
     type CanvasDirectRunAnnotationTaskRef,
 } from '../../../domains/ai-generation/CanvasDirectRunOverlay';
+import { getDirectLlmConfig, callDirectLlm } from '../../../services/directLlm';
 
 /* ── Types ───────────────────────────────────────────────────────── */
 
@@ -32,6 +33,8 @@ export interface CanvasElementContextInfo {
     path?: string;
     displayName?: string;
     mimeType?: string;
+    /** 标注粒度: 'element' | 'page' */
+    scope?: string;
 }
 
 interface AnnotationOverlayProps {
@@ -633,6 +636,27 @@ export default function AnnotationOverlay({
         if (!popoverElementId || popoverTaskRef || !onExecuteAnnotationPrompt) return;
         const trimmedPrompt = popoverText.trim();
         if (!trimmedPrompt) return;
+
+        // 尝试直接调用 LLM（绕过 ACP）
+        const directConfig = getDirectLlmConfig();
+        if (directConfig.enabled && directConfig.apiKey) {
+            setPopoverExecutionTaskId(PENDING_ANNOTATION_TASK_ID);
+            try {
+                const result = await callDirectLlm(trimmedPrompt, {
+                    systemPrompt: '你是一个产品标注助手。根据用户对页面元素的描述，生成简洁准确的标注说明。',
+                });
+                setAnnotation(popoverElementId, result);
+                setPopoverExecutionTaskId(null);
+                setPopoverTaskRef(null);
+                setPopoverElementId(null);
+                setPopoverText('');
+                return;
+            } catch {
+                // 直接 LLM 失败，回退到 ACP
+                setPopoverExecutionTaskId(null);
+            }
+        }
+
         setAnnotation(popoverElementId, trimmedPrompt);
         const info = getElementInfoWithAnnotation(popoverElementId, trimmedPrompt);
         if (!info) return;

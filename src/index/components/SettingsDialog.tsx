@@ -32,6 +32,7 @@ import { apiService, type AgentVersionsResponse, type AssistantRuntimeResponse, 
 import { requireProjectScope, withProjectScope } from '../services/projectScope';
 import { normalizePromptClientPreference } from '../../common/promptExecution';
 import { ACP_PROVIDER_OPTIONS, type AcpProviderKey } from '../../common/acpModelConfig';
+import { syncConfigFromForm } from '../services/directLlm';
 import { runAiText, type AiRunClientError } from '../domains/ai-generation/aiRunClient';
 import {
     buildMakeClientUpdateFailurePrompt,
@@ -135,6 +136,11 @@ interface SettingsFormState {
     aiBaseUrl: string;
     aiApiKey: string;
     aiModel: string;
+    /** 批注 AI 直接调用配置（绕过 ACP） */
+    annotationDirectEnabled: boolean;
+    annotationDirectBaseUrl: string;
+    annotationDirectApiKey: string;
+    annotationDirectModel: string;
 }
 
 type AgentProviderTestStatus = 'idle' | 'testing' | 'passed' | 'failed';
@@ -177,6 +183,10 @@ const DEFAULT_FORM_STATE: SettingsFormState = {
     aiBaseUrl: 'https://api.openai.com/v1',
     aiApiKey: '',
     aiModel: 'gpt-image-2',
+    annotationDirectEnabled: false,
+    annotationDirectBaseUrl: 'https://api.openai.com/v1',
+    annotationDirectApiKey: '',
+    annotationDirectModel: 'gpt-4o',
 };
 
 function formatShareExpiry(expiresAt: string): string {
@@ -1113,6 +1123,9 @@ export default function SettingsDialog({ open, projectId, onClose, onSaved, make
     };
 
     const handleSave = async () => {
+        // 同步直接 LLM 配置到 localStorage（绕过 ACP）
+        syncConfigFromForm(formState);
+
         const host = formState.host.trim();
         if (!host) {
             toast.error('主机地址不能为空');
@@ -1783,6 +1796,57 @@ export default function SettingsDialog({ open, projectId, onClose, onSaved, make
                                             />
                                         </Field>
                                     </div>
+                                </section>
+
+                                {/* 批注 AI 直接调用配置（绕过 ACP） */}
+                                <section className="space-y-4">
+                                    <div className="flex items-start gap-3 rounded-lg border border-border/50 bg-muted/20 p-4">
+                                        <Switch
+                                            id="annotation-direct-toggle"
+                                            checked={formState.annotationDirectEnabled}
+                                            onCheckedChange={(checked) => updateField('annotationDirectEnabled', checked)}
+                                        />
+                                        <div className="space-y-1 flex-1 min-w-0">
+                                            <label htmlFor="annotation-direct-toggle" className="text-sm font-medium cursor-pointer">
+                                                绕过 ACP，直接调用 LLM
+                                            </label>
+                                            <p className="text-xs text-muted-foreground">
+                                                启用后批注 AI 请求直接通过 OpenAI 兼容 API 调用，不依赖本地 ACP 服务（localhost:32124）。
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {formState.annotationDirectEnabled && (
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <Field>
+                                                <FieldLabelWithHint hint="OpenAI 或兼容服务的 /v1 API 地址">Base URL</FieldLabelWithHint>
+                                                <Input
+                                                    value={formState.annotationDirectBaseUrl}
+                                                    onChange={(event) => updateField('annotationDirectBaseUrl', event.target.value)}
+                                                    placeholder="https://api.openai.com/v1"
+                                                />
+                                            </Field>
+
+                                            <Field>
+                                                <FieldLabelWithHint hint="API Key，保存在浏览器本地">API Key</FieldLabelWithHint>
+                                                <Input
+                                                    type="password"
+                                                    value={formState.annotationDirectApiKey}
+                                                    onChange={(event) => updateField('annotationDirectApiKey', event.target.value)}
+                                                    placeholder="sk-..."
+                                                />
+                                            </Field>
+
+                                            <Field>
+                                                <FieldLabelWithHint hint="使用的模型 ID">模型</FieldLabelWithHint>
+                                                <Input
+                                                    value={formState.annotationDirectModel}
+                                                    onChange={(event) => updateField('annotationDirectModel', event.target.value)}
+                                                    placeholder="gpt-4o / claude-sonnet-4 / deepseek-chat"
+                                                />
+                                            </Field>
+                                        </div>
+                                    )}
                                 </section>
 
                                 <Separator className="my-5" />
