@@ -5,14 +5,28 @@ export const api = ofetch.create({
   headers: { 'Content-Type': 'application/json' },
   onResponseError({ response }) {
     const msg = response._data?.message || response.statusText
-    window.$message?.error(msg)
+    console.error(msg)
   },
 })
+
+// ── 项目 API ──
+
+export const projectApi = {
+  list: (page = 1, size = 10) => api('/v1/projects/', { params: { page, size } }),
+  get: (id: number) => api(`/v1/projects/${id}`),
+  create: (data: any) => api('/v1/projects/', { method: 'POST', body: data }),
+  update: (id: number, data: any) => api(`/v1/projects/${id}`, { method: 'PUT', body: data }),
+  delete: (id: number) => api(`/v1/projects/${id}`, { method: 'DELETE' }),
+  listPrototypes: (projectId: number, page = 1, size = 10) =>
+    api(`/v1/projects/${projectId}/prototypes`, { params: { page, size } }),
+  createPrototype: (projectId: number, name = '新原型') =>
+    api(`/v1/projects/${projectId}/prototypes`, { method: 'POST', params: { name } }),
+}
 
 // ── 原型 API ──
 
 export const prototypeApi = {
-  list: (page = 1, size = 10) => api('/v1/prototypes/', { params: { page, size } }),
+  list: (params?: any) => api('/v1/prototypes/', { params }),
   get: (id: number) => api(`/v1/prototypes/${id}`),
   create: (data: any) => api('/v1/prototypes/', { method: 'POST', body: data }),
   update: (id: number, data: any) => api(`/v1/prototypes/${id}`, { method: 'PUT', body: data }),
@@ -66,6 +80,4 @@ export const aiApi = {
     api('/v1/ai/prompt-pack', { params: { role, prototype_id: prototypeId } }),
   annotate: (prompt: string, elementInfo?: any) =>
     api('/v1/ai/agents/annotate', { method: 'POST', body: { prompt, element_info: elementInfo } }),
-  review: (target: string, context?: string) =>
-    api('/v1/ai/agents/review', { method: 'POST', body: { target, context } }),
 }

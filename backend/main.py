@@ -14,7 +14,7 @@ from typing import AsyncIterator
 import sentry_sdk
 import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -38,17 +38,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """应用生命周期管理"""
     # 启动时
     configure_logging()
-    from tortoise import Tortoise
 
-    tortoise_config = get_tortoise_config()
-    await Tortoise.init(config=tortoise_config)
-    await Tortoise.generate_schemas()
-    LOGGER.bind(db_url=settings.DB_HOST).info("Database connected")
-
-    # 初始化 Prometheus
-    if settings.PROMETHEUS_ENABLED:
-        Instrumentator().instrument(app).expose(app, endpoint="/metrics")
-        LOGGER.info("Prometheus metrics enabled")
+    from config.tortoise import init_tortoise, close_tortoise
+    register = await init_tortoise(app)
+    app.state.tortoise_register = register
+    LOGGER.bind(mode="sqlite" if settings.DEBUG else "postgres").info("Database connected")
 
     # 初始化 Sentry
     if settings.SENTRY_DSN:
@@ -66,8 +60,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
     # 关闭时
-    from tortoise import Tortoise
-    await Tortoise.close_connections()
+    if hasattr(app.state, 'tortoise_register'):
+        from config.tortoise import close_tortoise
+        await close_tortoise(app.state.tortoise_register)
     LOGGER.info("Database connections closed")
 
 
@@ -103,6 +98,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # 4. 全局异常捕获
 app.add_middleware(CatchErrorMiddleware)
 app.add_exception_handler(Exception, global_exception_handler)
+
+# Prometheus 指标
+if get_settings().PROMETHEUS_ENABLED:
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 # ── 健康检查 ──
@@ -148,8 +147,9 @@ async def health_detailed() -> dict:
 
 # ── 路由注册 ──
 
-from api.router.v1 import annotations, knowledge, prototypes, publish, ai
+from api.router.v1 import annotations, knowledge, projects, prototypes, publish, ai
 
+app.include_router(projects.router)
 app.include_router(prototypes.router)
 app.include_router(annotations.router)
 app.include_router(knowledge.router)

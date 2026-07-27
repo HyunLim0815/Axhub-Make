@@ -2,7 +2,7 @@
   <div>
     <el-page-header :title="prototype?.name || '加载中...'" @back="$router.push('/prototypes')" style="margin-bottom:16px" />
 
-    <el-row :gutter="16" style="height: calc(100vh - 140px)">
+    <el-row :gutter="16" style="flex:1;min-height:0">
       <!-- 画布区域 -->
       <el-col :span="16">
         <el-card shadow="never" style="height:100%">

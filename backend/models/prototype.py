@@ -11,8 +11,11 @@ from models.basic_model import BaseModel
 
 
 class Prototype(BaseModel):
-    """原型 — 项目的核心实体"""
+    """原型 — 属于某个项目"""
 
+    project = fields.ForeignKeyField(
+        "models.Project", related_name="prototypes", description="所属项目", null=True
+    )
     name = fields.CharField(max_length=255, description="原型名称")
     description = fields.TextField(default="", description="原型描述")
     page_id = fields.CharField(max_length=255, default="", description="当前页面 ID")

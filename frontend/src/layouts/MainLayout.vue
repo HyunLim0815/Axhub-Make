@@ -1,16 +1,16 @@
 <template>
-  <el-container style="height: 100vh">
-    <!-- 顶部导航栏（替代原有侧边栏） -->
-    <el-header class="app-header" height="48px">
+  <el-container style="height: 100vh; flex-direction: column">
+    <!-- 顶部导航栏 -->
+    <el-header class="app-header" height="52px">
       <div class="header-left">
-        <span class="app-logo">Axhub Make</span>
+        <span class="app-logo">产品原型工作台</span>
         <el-menu
           :default-active="route.path"
           mode="horizontal"
           @select="handleSelect"
-          style="border-bottom: none; margin-left: 24px"
+          style="border-bottom: none; margin-left: 24px; width: 800px !important"
         >
-          <el-menu-item index="/"><el-icon><Odometer /></el-icon>仪表盘</el-menu-item>
+          <el-menu-item index="/"><el-icon><Odometer /></el-icon>项目</el-menu-item>
           <el-menu-item index="/prototypes"><el-icon><Document /></el-icon>原型</el-menu-item>
           <el-menu-item index="/knowledge"><el-icon><Notebook /></el-icon>知识库</el-menu-item>
           <el-menu-item index="/publish"><el-icon><Promotion /></el-icon>发布</el-menu-item>
@@ -27,7 +27,7 @@
       </div>
     </el-header>
 
-    <!-- 内容区 -->
+    <!-- 内容区 — 自动填充剩余高度 -->
     <el-main class="app-main">
       <router-view />
     </el-main>
@@ -56,8 +56,13 @@ function handleSelect(index: string) {
   border-bottom: 1px solid var(--el-border-color-light);
   background: var(--el-bg-color);
   padding: 0 16px;
-  height: 48px !important;
+  height: 70px !important;
 }
+
+.el-menu{
+    min-width: 400px !important;
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -77,6 +82,9 @@ function handleSelect(index: string) {
 .app-main {
   background: var(--el-bg-color-page);
   padding: 20px;
-  overflow-y: auto;
+  overflow: auto;
+  flex: 1;
+  height: 0;
+  min-height: 0;
 }
 </style>

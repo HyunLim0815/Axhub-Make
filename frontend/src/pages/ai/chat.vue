@@ -1,5 +1,5 @@
 <template>
-  <div style="display:flex;flex-direction:column;height:calc(100vh - 100px)">
+  <div style="display:flex;flex-direction:column;height:100%">
     <h2 style="margin-bottom:16px">AI 助手</h2>
 
     <el-card shadow="never" style="flex:1;overflow:auto;margin-bottom:12px">

@@ -23,10 +23,17 @@ class PrototypeController:
         return await Prototype.get_by_id(id_)
 
     @staticmethod
-    async def get_list(page: int = 1, size: int = 10) -> tuple[list[Prototype], int]:
+    async def get_list(
+        project_id: int | None = None,
+        page: int = 1,
+        size: int = 10,
+    ) -> tuple[list[Prototype], int]:
+        query = Prototype.filter(delete_time=None)
+        if project_id:
+            query = query.filter(project_id=project_id)
         offset = (page - 1) * size
-        prototypes = await Prototype.filter(delete_time=None).offset(offset).limit(size)
-        total = await Prototype.filter(delete_time=None).count()
+        prototypes = await query.offset(offset).limit(size)
+        total = await query.count()
         return list(prototypes), total
 
     @staticmethod
