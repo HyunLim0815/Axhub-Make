@@ -53,6 +53,8 @@ import { handleProjectRegistryApi } from './managementApi.projectRegistry.ts';
 import { handleAxhubReviewReportsApi } from './managementApi.axhubReviewReports.ts';
 import { handleReviewReportsApi } from './managementApi.reviewReports.ts';
 import { handlePrototypeAnnotationApi } from './managementApi.prototypeAnnotation.ts';
+import { handleKnowledgeBaseApi } from './knowledge-base/knowledge-api.ts';
+import { handlePublishApi } from './publish/publish-api.ts';
 import { handlePrototypeCommentsApi } from './managementApi.prototypeComments.ts';
 import { handleDocumentCommentsApi } from './managementApi.documentComments.ts';
 import { handlePrototypeSpecApi } from './managementApi.prototypeSpec.ts';
@@ -1544,6 +1546,8 @@ export async function handleManagementApi(req: IncomingMessage, res: ServerRespo
     projectId: requestContext.project.id,
   })) return true;
   if (handlePrototypeAnnotationApi(req, res, requestContext, url)) return true;
+  if (handleKnowledgeBaseApi(req, res, { projectRoot: requestContext.project.root, projectId: requestContext.project.id }, url)) return true;
+  if (handlePublishApi(req, res, { projectRoot: requestContext.project.root, projectId: requestContext.project.id }, url)) return true;
   if (handlePrototypeCommentsApi(req, res, requestContext, url)) return true;
   if (handleDocumentCommentsApi(req, res, requestContext, url)) return true;
   if (handleMediaApi(req, res, activeProjectRoot, { mediaRoot: getDeclaredResourceWriteDir(requestContext, 'media') || undefined })) return true;
