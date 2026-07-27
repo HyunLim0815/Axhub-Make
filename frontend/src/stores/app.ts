@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { darkTheme } from 'element-plus'
 
 export const useAppStore = defineStore('app', () => {
   const darkMode = ref(localStorage.getItem('axhub_dark') === 'true')
-  const sidebarCollapsed = ref(false)
-  const currentProject = ref('')
 
   function toggleDark() {
     darkMode.value = !darkMode.value
@@ -12,9 +11,5 @@ export const useAppStore = defineStore('app', () => {
     document.documentElement.classList.toggle('dark', darkMode.value)
   }
 
-  function toggleSidebar() {
-    sidebarCollapsed.value = !sidebarCollapsed.value
-  }
-
-  return { darkMode, sidebarCollapsed, currentProject, toggleDark, toggleSidebar }
+  return { darkMode, toggleDark }
 })

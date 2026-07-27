@@ -1,58 +1,43 @@
 <template>
   <el-container style="height: 100vh">
-    <!-- 左侧边栏 -->
-    <el-aside :width="appStore.sidebarCollapsed ? '64px' : '240px'" class="app-sidebar">
-      <div class="sidebar-header">
-        <span v-if="!appStore.sidebarCollapsed" class="sidebar-title">Axhub Make</span>
-        <span v-else class="sidebar-title">AM</span>
+    <!-- 顶部导航栏（替代原有侧边栏） -->
+    <el-header class="app-header" height="48px">
+      <div class="header-left">
+        <span class="app-logo">Axhub Make</span>
+        <el-menu
+          :default-active="route.path"
+          mode="horizontal"
+          @select="handleSelect"
+          style="border-bottom: none; margin-left: 24px"
+        >
+          <el-menu-item index="/"><el-icon><Odometer /></el-icon>仪表盘</el-menu-item>
+          <el-menu-item index="/prototypes"><el-icon><Document /></el-icon>原型</el-menu-item>
+          <el-menu-item index="/knowledge"><el-icon><Notebook /></el-icon>知识库</el-menu-item>
+          <el-menu-item index="/publish"><el-icon><Promotion /></el-icon>发布</el-menu-item>
+          <el-menu-item index="/ai"><el-icon><ChatLineSquare /></el-icon>AI 助手</el-menu-item>
+        </el-menu>
       </div>
-      <el-menu
-        :default-active="route.path"
-        :collapse="appStore.sidebarCollapsed"
-        @select="handleSelect"
-        style="border-right: none"
-      >
-        <el-menu-item index="/"><el-icon><Odometer /></el-icon><span>仪表盘</span></el-menu-item>
-        <el-menu-item index="/prototypes"><el-icon><Document /></el-icon><span>原型</span></el-menu-item>
-        <el-menu-item index="/knowledge"><el-icon><Notebook /></el-icon><span>知识库</span></el-menu-item>
-        <el-menu-item index="/publish"><el-icon><Promotion /></el-icon><span>发布</span></el-menu-item>
-        <el-menu-item index="/ai"><el-icon><ChatLineSquare /></el-icon><span>AI 助手</span></el-menu-item>
-        <el-menu-item index="/settings"><el-icon><Setting /></el-icon><span>设置</span></el-menu-item>
-      </el-menu>
-    </el-aside>
+      <div class="header-right">
+        <el-button text @click="$router.push('/settings')">
+          <el-icon><Setting /></el-icon>
+        </el-button>
+        <el-button text @click="appStore.toggleDark">
+          <el-icon><Moon v-if="!appStore.darkMode" /><Sunny v-else /></el-icon>
+        </el-button>
+      </div>
+    </el-header>
 
-    <!-- 主内容区 -->
-    <el-container>
-      <!-- 顶部栏 -->
-      <el-header class="app-header" height="48px">
-        <div class="header-left">
-          <el-button text @click="appStore.toggleSidebar">
-            <el-icon><Fold v-if="!appStore.sidebarCollapsed" /><Expand v-else /></el-icon>
-          </el-button>
-          <el-breadcrumb separator="/" style="margin-left: 12px">
-            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="route.meta?.title">{{ route.meta.title }}</el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
-        <div class="header-right">
-          <el-button text @click="appStore.toggleDark">
-            <el-icon><Moon v-if="!appStore.darkMode" /><Sunny v-else /></el-icon>
-          </el-button>
-        </div>
-      </el-header>
-
-      <!-- 内容 -->
-      <el-main class="app-main">
-        <router-view />
-      </el-main>
-    </el-container>
+    <!-- 内容区 -->
+    <el-main class="app-main">
+      <router-view />
+    </el-main>
   </el-container>
 </template>
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
-import { Fold, Expand, Moon, Sunny, Odometer, Document, Notebook, Promotion, ChatLineSquare, Setting } from '@element-plus/icons-vue'
+import { Moon, Sunny, Odometer, Document, Notebook, Promotion, ChatLineSquare, Setting } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,21 +49,6 @@ function handleSelect(index: string) {
 </script>
 
 <style scoped>
-.app-sidebar {
-  background-color: var(--el-bg-color);
-  border-right: 1px solid var(--el-border-color-light);
-  transition: width 0.3s;
-  overflow: hidden;
-}
-.sidebar-header {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--el-border-color-light);
-  font-weight: 600;
-  font-size: 16px;
-}
 .app-header {
   display: flex;
   align-items: center;
@@ -86,10 +56,23 @@ function handleSelect(index: string) {
   border-bottom: 1px solid var(--el-border-color-light);
   background: var(--el-bg-color);
   padding: 0 16px;
+  height: 48px !important;
 }
-.header-left, .header-right {
+.header-left {
   display: flex;
   align-items: center;
+  flex: 1;
+}
+.app-logo {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--el-color-primary);
+  white-space: nowrap;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .app-main {
   background: var(--el-bg-color-page);
