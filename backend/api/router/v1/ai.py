@@ -59,3 +59,33 @@ async def get_prompt_pack(
     """
     prompt = await PromptPack.generate(role, prototype_id)
     return ApiResponse(data={"role": role, "prompt": prompt})
+
+
+@router.post("/agents/annotate")
+async def agent_annotate(prompt: str, element_info: dict | None = None):
+    """标注执行 Agent (LangGraph)"""
+    from ai.agents.annotation_agent import AnnotationAgent
+
+    agent = AnnotationAgent()
+    result = await agent.run(prompt, element_info)
+    return ApiResponse(data={"annotation": result})
+
+
+@router.post("/agents/review")
+async def agent_review(target: str, context: str | None = None):
+    """多维度审查 Agent (LangGraph)"""
+    from ai.agents.review_agent import ReviewAgent
+
+    agent = ReviewAgent()
+    result = await agent.run(target, context)
+    return ApiResponse(data=result)
+
+
+@router.post("/agents/extract-knowledge")
+async def agent_extract_knowledge(text: str, source: str = ""):
+    """知识抽取 Agent"""
+    from ai.agents.knowledge_agent import KnowledgeAgent
+
+    agent = KnowledgeAgent()
+    entries = await agent.extract(text, source)
+    return ApiResponse(data={"entries": entries, "count": len(entries)})
