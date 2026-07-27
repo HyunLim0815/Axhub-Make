@@ -261,6 +261,20 @@
         "images": [],
         "createdAt": 1779667200000,
         "updatedAt": 1779667200000
+      },
+      {
+        "id": "page-scope-demo",
+        "index": 12,
+        "title": "页面级标注示例",
+        "pageId": "prototype-as-prd",
+        "scope": "page",
+        "aiPrompt": "这是一个页面级标注，不绑定特定元素",
+        "annotationText": "",
+        "hasMarkdown": true,
+        "color": "#722ed1",
+        "images": [],
+        "createdAt": 1785119596640,
+        "updatedAt": 1785119596640
       }
     ],
     "updatedAt": 1782570827439

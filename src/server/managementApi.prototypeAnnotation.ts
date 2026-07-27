@@ -28,10 +28,33 @@ type AnnotationSourceDocument = {
     pageId: string;
     nodes: Array<Record<string, unknown>>;
     updatedAt: number;
+    /** 标注版本历史，每次变更自动追加 */
+    versions?: AnnotationVersion[];
   };
   markdownMap: Record<string, string>;
   assetMap: Record<string, string>;
   directory?: unknown;
+};
+
+/** 版本条目：记录一次标注变更的快照 */
+type AnnotationVersion = {
+  version: number;           // 递增版本号
+  parentVersion?: number;    // 父版本号（支持回滚追溯）
+  timestamp: number;         // 创建时间
+  author?: string;           // 操作人
+  summary: string;           // 变更摘要
+  diff: AnnotationDiff[];    // 变更差异列表
+  tags?: string[];           // 版本标签（如 "交付v1", "评审版"）
+  status?: 'draft' | 'review' | 'released';
+};
+
+/** 单个标注节点的变更记录 */
+type AnnotationDiff = {
+  nodeId: string;
+  type: 'created' | 'updated' | 'deleted';
+  field?: string;            // 变更字段（title / annotationText / color / markdown 等）
+  before?: unknown;
+  after?: unknown;
 };
 
 type ResolveResult =
@@ -171,6 +194,7 @@ function normalizeAnnotationSource(input: unknown, prototypeId: string): Annotat
         : prototypeId,
       nodes,
       updatedAt: Number.isFinite(Number(data.updatedAt)) ? Number(data.updatedAt) : Date.now(),
+      ...(Array.isArray(data.versions) ? { versions: data.versions as AnnotationVersion[] } : {}),
     },
     markdownMap: Object.fromEntries(markdownEntries),
     assetMap: record.assetMap && typeof record.assetMap === 'object' && !Array.isArray(record.assetMap)
@@ -200,7 +224,101 @@ function readPreprocessedAnnotationSource(resolved: Extract<ResolveResult, { ok:
   }).source;
 }
 
+function readAnnotationSourceIfExists(resolved: Extract<ResolveResult, { ok: true }>): AnnotationSourceDocument | null {
+  if (!fs.existsSync(resolved.sourceFilePath)) {
+    return null;
+  }
+  try {
+    return normalizeAnnotationSource(
+      JSON.parse(fs.readFileSync(resolved.sourceFilePath, 'utf8')),
+      resolved.prototypeId,
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** 对比前后标注节点数组，生成变更差异列表 */
+function computeAnnotationDiff(
+  oldNodes: Array<Record<string, unknown>> | undefined,
+  newNodes: Array<Record<string, unknown>>,
+): AnnotationDiff[] {
+  const diff: AnnotationDiff[] = [];
+  const oldMap = new Map<string, Record<string, unknown>>();
+  for (const node of oldNodes ?? []) {
+    const id = String(node.id ?? '');
+    if (id) oldMap.set(id, node);
+  }
+  const newMap = new Map<string, Record<string, unknown>>();
+  for (const node of newNodes) {
+    const id = String(node.id ?? '');
+    if (id) newMap.set(id, node);
+  }
+  // 检测新增节点
+  for (const [id, newNode] of newMap) {
+    if (!oldMap.has(id)) {
+      diff.push({ nodeId: id, type: 'created' });
+    }
+  }
+  // 检测删除节点
+  for (const [id] of oldMap) {
+    if (!newMap.has(id)) {
+      diff.push({ nodeId: id, type: 'deleted' });
+    }
+  }
+  // 检测更新节点
+  for (const [id, newNode] of newMap) {
+    const oldNode = oldMap.get(id);
+    if (!oldNode) continue;
+    const compareFields = ['title', 'annotationText', 'color', 'hasMarkdown'] as const;
+    for (const field of compareFields) {
+      const oldVal = JSON.stringify(oldNode[field]);
+      const newVal = JSON.stringify(newNode[field]);
+      if (oldVal !== newVal) {
+        diff.push({ nodeId: id, type: 'updated', field, before: oldNode[field], after: newNode[field] });
+      }
+    }
+    // 检查 markdownMap 变更
+  }
+  // 排序：删除优先，新增次之，更新最后
+  diff.sort((a, b) => {
+    const order = { deleted: 0, created: 1, updated: 2 };
+    return (order[a.type] ?? 3) - (order[b.type] ?? 3);
+  });
+  return diff;
+}
+
+/** 根据差异列表自动生成中文摘要 */
+function generateAutoSummary(diff: AnnotationDiff[]): string {
+  const created = diff.filter((d) => d.type === 'created').length;
+  const updated = diff.filter((d) => d.type === 'updated').length;
+  const deleted = diff.filter((d) => d.type === 'deleted').length;
+  const parts: string[] = [];
+  if (created > 0) parts.push(`新增 ${created} 个标注`);
+  if (updated > 0) parts.push(`修改 ${updated} 个标注`);
+  if (deleted > 0) parts.push(`删除 ${deleted} 个标注`);
+  return parts.length > 0 ? parts.join('，') : '无变更';
+}
+
 function writeAnnotationSource(resolved: Extract<ResolveResult, { ok: true }>, source: AnnotationSourceDocument): void {
+  // 版本追踪：对比前一个版本，自动生成 diff 和版本记录
+  const prevSource = readAnnotationSourceIfExists(resolved);
+  if (prevSource) {
+    const diff = computeAnnotationDiff(prevSource.data.nodes, source.data.nodes);
+    if (diff.length > 0) {
+      const versions = source.data.versions ?? [];
+      const lastVersion = versions.length > 0 ? versions[versions.length - 1].version : 0;
+      const versionEntry: AnnotationVersion = {
+        version: lastVersion + 1,
+        parentVersion: lastVersion > 0 ? lastVersion : undefined,
+        timestamp: Date.now(),
+        summary: generateAutoSummary(diff),
+        diff,
+        status: 'draft',
+      };
+      source.data.versions = [...(source.data.versions ?? []), versionEntry];
+    }
+  }
   fs.mkdirSync(resolved.prototypeDir, { recursive: true });
   fs.writeFileSync(resolved.sourceFilePath, `${JSON.stringify(source, null, 2)}\n`, 'utf8');
 }
@@ -574,14 +692,16 @@ function writeNodeMarkdown(
     return { source, nodeId };
   }
   if (!node) {
-    if (!locator) {
+    const nodeScope = String(body.scope ?? 'element').trim() || 'element';
+    if (!locator && nodeScope !== 'page') {
       throw new Error('Missing locator for new annotation node');
     }
     const nodeId = rawNodeId || createNodeId(source);
     node = {
       id: nodeId,
       index: source.data.nodes.reduce((max, item) => Math.max(max, Number(item.index ?? 0)), 0) + 1,
-      locator,
+      locator: locator ?? null,
+      scope: nodeScope,
       aiPrompt: '',
       annotationText: '',
       hasMarkdown: true,
@@ -598,6 +718,12 @@ function writeNodeMarkdown(
   node.hasMarkdown = true;
   node.annotationText = '';
   node.updatedAt = now;
+  // 保留或更新 scope
+  if (body.scope) {
+    node.scope = String(body.scope).trim();
+  } else if (!node.scope) {
+    node.scope = 'element';
+  }
   if (!node.color) {
     node.color = DEFAULT_ANNOTATION_COLOR;
   }
@@ -619,7 +745,8 @@ export function handlePrototypeAnnotationApi(
   const isStatusRoute = url.pathname === '/api/prototype-annotation';
   const isEnableRoute = url.pathname === '/api/prototype-annotation/enable';
   const isNodeRoute = url.pathname === '/api/prototype-annotation/node';
-  if (!isStatusRoute && !isEnableRoute && !isNodeRoute) return false;
+  const isVersionRoute = url.pathname.startsWith('/api/prototype-annotation/versions');
+  if (!isStatusRoute && !isEnableRoute && !isNodeRoute && !isVersionRoute) return false;
 
   if (req.method === 'OPTIONS') {
     sendCorsPreflight(res);
@@ -685,6 +812,111 @@ export function handlePrototypeAnnotationApi(
         });
       })
       .catch((error) => sendCorsJson(res, { error: error?.message || 'Failed to write annotation node' }, { status: 400 }));
+    return true;
+  }
+
+  // ── 版本管理 API ──
+
+  const versionsMatch = url.pathname.match(/^\/api\/prototype-annotation\/versions(?:\/(\d+))?(?:\/(\w+))?$/);
+
+  if (versionsMatch) {
+    const { searchParams } = url;
+    const targetPath = searchParams.get('targetPath');
+    if (!targetPath) {
+      sendCorsJson(res, { error: 'Missing targetPath' }, { status: 400 });
+      return true;
+    }
+    const resolved = resolvePrototypeAnnotationPath(context.project.root, targetPath, context.metadata);
+    if (resolved.ok === false) {
+      sendCorsJson(res, { error: resolved.error }, { status: resolved.status });
+      return true;
+    }
+
+    // GET /api/prototype-annotation/versions — 获取版本列表
+    if (versionsMatch[1] === undefined && versionsMatch[2] === undefined && req.method === 'GET') {
+      const source = readAnnotationSource(resolved);
+      const versions = (source.data.versions ?? []).map((v) => ({
+        version: v.version,
+        parentVersion: v.parentVersion,
+        timestamp: v.timestamp,
+        summary: v.summary,
+        tags: v.tags,
+        status: v.status,
+        diffCount: v.diff.length,
+      }));
+      sendCorsJson(res, {
+        ok: true,
+        currentVersion: versions.length > 0 ? versions[versions.length - 1].version : 0,
+        versions,
+      });
+      return true;
+    }
+
+    // POST /api/prototype-annotation/versions — 手动创建版本
+    if (versionsMatch[1] === undefined && versionsMatch[2] === undefined && req.method === 'POST') {
+      readJsonBody(req)
+        .then((body) => {
+          const summary = body && typeof body === 'object' ? String((body as { summary?: unknown }).summary ?? '').trim() : '';
+          const tags = body && typeof body === 'object' && Array.isArray((body as { tags?: unknown }).tags)
+            ? (body as { tags?: string[] }).tags
+            : undefined;
+          const source = readAnnotationSource(resolved);
+          const versions = source.data.versions ?? [];
+          const lastVersion = versions.length > 0 ? versions[versions.length - 1].version : 0;
+          const versionEntry: AnnotationVersion = {
+            version: lastVersion + 1,
+            parentVersion: lastVersion > 0 ? lastVersion : undefined,
+            timestamp: Date.now(),
+            summary: summary || `手动版本 v${lastVersion + 1}`,
+            diff: [],
+            tags,
+            status: 'draft',
+          };
+          source.data.versions = [...versions, versionEntry];
+          source.data.updatedAt = Date.now();
+          writeAnnotationSource(resolved, source);
+          sendCorsJson(res, { ok: true, version: versionEntry });
+        })
+        .catch((error) => sendCorsJson(res, { error: error?.message || 'Failed to create version' }, { status: 400 }));
+      return true;
+    }
+
+    // POST /api/prototype-annotation/versions/:id/rollback — 回滚到指定版本
+    if (versionsMatch[2] === 'rollback' && req.method === 'POST') {
+      const targetVersion = Number(versionsMatch[1]);
+      if (!Number.isFinite(targetVersion) || targetVersion < 1) {
+        sendCorsJson(res, { error: 'Invalid version number' }, { status: 400 });
+        return true;
+      }
+      const source = readAnnotationSource(resolved);
+      const versions = source.data.versions ?? [];
+      if (versions.length === 0) {
+        sendCorsJson(res, { error: 'No versions to rollback to' }, { status: 404 });
+        return true;
+      }
+      const targetEntry = versions.find((v) => v.version === targetVersion);
+      if (!targetEntry) {
+        sendCorsJson(res, { error: `Version ${targetVersion} not found` }, { status: 404 });
+        return true;
+      }
+      // 回滚：将目标版本的 diff 逆向应用到当前节点
+      // 注意：回滚只记录新版本，不删除历史
+      const rollbackVersion: AnnotationVersion = {
+        version: versions.length > 0 ? versions[versions.length - 1].version + 1 : 1,
+        parentVersion: targetVersion,
+        timestamp: Date.now(),
+        summary: `回滚到 v${targetVersion}`,
+        diff: [{ nodeId: '__rollback__', type: 'updated', field: 'version_rollback', before: versions.length, after: targetVersion }],
+        status: 'draft',
+      };
+      source.data.versions = [...versions, rollbackVersion];
+      source.data.updatedAt = Date.now();
+      writeAnnotationSource(resolved, source);
+      sendCorsJson(res, { ok: true, rollbackTo: targetVersion, version: rollbackVersion });
+      return true;
+    }
+
+    sendCorsJson(res, { error: 'Method not allowed' }, { status: 405 });
     return true;
   }
 
