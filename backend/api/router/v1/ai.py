@@ -1,7 +1,8 @@
-"""AI API 路由 — SSE 流式 + Context Bundle"""
+"""AI API 路由 — SSE 流式 + Context Bundle + Prompt Pack"""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Query
 
+from ai.context_bundle import ContextBundle, PromptPack
 from ai.llm import LLMService
 from api.responses.Base import ApiResponse
 from utils.tools.sse import create_sse_response
@@ -39,13 +40,22 @@ async def chat_stream(prompt: str, system_prompt: str | None = None):
 
 
 @router.get("/context")
-async def get_context(prototype_id: int | None = None):
-    """获取项目上下文（知识库摘要）"""
-    from api.controllers.KnowledgeController import KnowledgeController
+async def get_context(prototype_id: int | None = Query(None)):
+    """获取 Context Bundle (结构化上下文)"""
+    bundle = await ContextBundle.build(prototype_id)
+    return ApiResponse(data=bundle)
 
-    entries = await KnowledgeController.get_list(page=1, size=20)
-    context = "# 项目知识库\n\n"
-    for entry in entries[0]:
-        context += f"- **{entry.title}** ({entry.type}): {entry.content[:200]}\n"
 
-    return ApiResponse(data={"context": context})
+@router.get("/prompt-pack")
+async def get_prompt_pack(
+    role: str = Query("engineering", pattern="^(engineering|testing|review)$"),
+    prototype_id: int | None = Query(None),
+):
+    """获取角色 Prompt 包
+
+    Args:
+        role: engineering | testing | review
+        prototype_id: 可选原型 ID
+    """
+    prompt = await PromptPack.generate(role, prototype_id)
+    return ApiResponse(data={"role": role, "prompt": prompt})
