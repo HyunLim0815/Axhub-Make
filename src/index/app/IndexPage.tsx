@@ -781,6 +781,17 @@ export default function IndexPage({
             messageApi.warning('请输入提示词');
             return false;
         }
+        // 尝试直接调用 LLM（绕过 ACP）
+        try {
+            const { tryDirectLlmFirst } = await import('../services/directLlm.ts');
+            const directResult = await tryDirectLlmFirst(prompt, {
+                systemPrompt: '你是一个产品审查助手。请从产品角度分析需求内容，给出改进建议和潜在问题。',
+            });
+            if (directResult.used) {
+                messageApi.success('AI 审查完成（直接调用）');
+                return true;
+            }
+        } catch { /* 忽略，走 ACP 回退 */ }
         if (!ensureDefaultAiConfigured(preferences.preferredPromptClient)) return false;
         const annotationPromptClient = preferences.annotationPromptClient || preferences.preferredPromptClient;
         const annotationProvider = resolveAcpPromptClientProvider(annotationPromptClient);
@@ -1747,6 +1758,17 @@ export default function IndexPage({
             messageApi.warning('请输入提示词');
             return { ok: false };
         }
+        // 尝试直接调用 LLM（绕过 ACP）
+        try {
+            const { tryDirectLlmFirst } = await import('../services/directLlm.ts');
+            const directResult = await tryDirectLlmFirst(prompt, {
+                systemPrompt: '你是一个 AI 设计助手。根据用户需求，生成精确的页面结构描述或代码。',
+            });
+            if (directResult.used) {
+                messageApi.success('AI 处理完成（直接调用）');
+                return { ok: true };
+            }
+        } catch { /* 忽略，走 ACP 回退 */ }
         if (!ensureDefaultAiConfigured(preferences.preferredPromptClient)) return { ok: false };
         const annotationPromptClient = preferences.annotationPromptClient || preferences.preferredPromptClient;
         const annotationProvider = resolveAcpPromptClientProvider(annotationPromptClient);
@@ -2200,6 +2222,8 @@ export default function IndexPage({
         maxWidth: assistantController.assistantPanelMaxWidth,
         iframeEntries: assistantController.assistantIframeEntries,
         activeIframeKey: assistantController.assistantActiveIframeKey,
+        aiRunning: assistantController.aiRunning,
+        aiStatusText: assistantController.aiStatusText,
         onIframeRef: assistantController.handleAssistantIframeRef,
         onIframeLoad: assistantController.handleAssistantIframeLoad,
         onResize: assistantController.setAssistantPanelWidth,

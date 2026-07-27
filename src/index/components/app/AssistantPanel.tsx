@@ -17,6 +17,10 @@ interface AssistantPanelProps {
     maxWidth: number;
     iframeEntries: AssistantIframeRenderEntry[];
     activeIframeKey: string | null;
+    /** AI 是否正在运行中 */
+    aiRunning?: boolean;
+    /** 当前状态文本（可选） */
+    aiStatusText?: string;
     onIframeRef: (key: string, iframe: HTMLIFrameElement | null) => void;
     onIframeLoad: (key: string) => void;
     onResize: (nextWidth: number) => void;
@@ -36,6 +40,8 @@ export default function AssistantPanel({
     maxWidth,
     iframeEntries,
     activeIframeKey,
+    aiRunning,
+    aiStatusText,
     onIframeRef,
     onIframeLoad,
     onResize,
@@ -194,6 +200,41 @@ export default function AssistantPanel({
                         }}
                     />
                 ))}
+                {/* AI 运行状态条 */}
+                {aiRunning ? (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 11,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '6px 12px',
+                        background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+                        color: '#fff',
+                        fontSize: 12,
+                        fontWeight: 500,
+                        pointerEvents: 'none',
+                    }}>
+                        <span style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: '#fff',
+                            opacity: 0.8,
+                            animation: 'axhubAssistantPulse 1.2s ease-in-out infinite',
+                        }} />
+                        <span>{aiStatusText || 'AI 正在处理...'}</span>
+                        <style>{`
+                            @keyframes axhubAssistantPulse {
+                                0%, 100% { opacity: 0.8; transform: scale(1); }
+                                50% { opacity: 0.4; transform: scale(0.8); }
+                            }
+                        `}</style>
+                    </div>
+                ) : null}
                 {assistantContextDragging ? (
                     <div
                         style={{

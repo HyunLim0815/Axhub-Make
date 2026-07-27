@@ -345,8 +345,8 @@ export function useAssistantPanelController({
     const ASSISTANT_RUNTIME_UI_LOG_PREFIX = '[assistant-runtime-ui]';
     const DEFAULT_ASSISTANT_WEB_BASE_URL = 'http://localhost:32124';
     const DEFAULT_ASSISTANT_INSTALL_CMD = 'npx -y @axhub/acp --port 32124';
-    const DEFAULT_ASSISTANT_PANEL_WIDTH = 320;
-    const MIN_ASSISTANT_PANEL_WIDTH = 320;
+    const DEFAULT_ASSISTANT_PANEL_WIDTH = 480;
+    const MIN_ASSISTANT_PANEL_WIDTH = 380;
     const ASSISTANT_PANEL_MAX_VIEWPORT_RATIO = 0.5;
     function getAssistantPanelMaxWidth(): number {
         return Math.max(
@@ -2398,6 +2398,8 @@ export function useAssistantPanelController({
         assistantVisible,
         assistantContextAppendAvailable,
         assistantPanelMounted,
+        aiRunning,
+        aiStatusText,
         assistantPanelWidth,
         setAssistantPanelWidth,
         assistantPanelMinWidth: Math.min(MIN_ASSISTANT_PANEL_WIDTH, assistantPanelMaxWidth),
