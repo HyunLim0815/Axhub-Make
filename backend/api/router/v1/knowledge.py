@@ -1,14 +1,13 @@
-"""知识库 API 路由"""
+"""知识库 API 路由 — 支持项目级 + 团队级"""
 
 from fastapi import APIRouter, Query
 
 from api.controllers.KnowledgeController import KnowledgeController
-from api.responses.Base import ApiResponse, PageParams, PageResponse
+from api.responses.Base import ApiResponse, PageResponse
 from api.schemas.knowledge import (
     KnowledgeEntryCreate,
     KnowledgeEntryResponse,
     KnowledgeEntryUpdate,
-    KnowledgeSearchParams,
 )
 
 router = APIRouter(prefix="/v1/knowledge", tags=["knowledge"])
@@ -26,6 +25,8 @@ async def get_entry(id: int):
 async def list_entries(
     type: str | None = Query(None, alias="type"),
     q: str | None = Query(None),
+    project_id: int | None = Query(None),
+    scope: str | None = Query(None, pattern="^(project|team)$"),
     page: int = Query(1, ge=1),
     size: int = Query(10, gt=0, le=200),
 ):
@@ -34,20 +35,14 @@ async def list_entries(
         total = len(entries)
         data = PageResponse(
             data=[KnowledgeEntryResponse.model_validate(e).model_dump() for e in entries],
-            total=total,
-            current_page=1,
-            last_page=1,
-            per_page=total or 1,
+            total=total, current_page=1, last_page=1, per_page=total or 1,
         )
         return ApiResponse(data=data.model_dump())
 
-    entries, total = await KnowledgeController.get_list(type, page, size)
+    entries, total = await KnowledgeController.get_list(type, project_id, scope, page, size)
     data = PageResponse(
         data=[KnowledgeEntryResponse.model_validate(e).model_dump() for e in entries],
-        total=total,
-        current_page=page,
-        last_page=-(-total // size),
-        per_page=size,
+        total=total, current_page=page, last_page=-(-total // size), per_page=size,
     )
     return ApiResponse(data=data.model_dump())
 
@@ -56,8 +51,7 @@ async def list_entries(
 async def create_entry(body: KnowledgeEntryCreate):
     entry = await KnowledgeController.create(body.model_dump())
     return ApiResponse(
-        code=201,
-        message="created",
+        code=201, message="created",
         data=KnowledgeEntryResponse.model_validate(entry).model_dump(),
     )
 

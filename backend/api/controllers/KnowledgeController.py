@@ -25,16 +25,38 @@ class KnowledgeController:
     @staticmethod
     async def get_list(
         type_filter: str | None = None,
+        project_id: int | None = None,
+        scope: str | None = None,
         page: int = 1,
         size: int = 10,
     ) -> tuple[list[KnowledgeEntry], int]:
         query = KnowledgeEntry.filter(delete_time=None)
         if type_filter:
             query = query.filter(type=type_filter)
+        if project_id:
+            query = query.filter(project_id=project_id)
+        if scope:
+            query = query.filter(scope=scope)
         offset = (page - 1) * size
         entries = await query.offset(offset).limit(size).order_by("-id")
         total = await query.count()
         return list(entries), total
+
+    @staticmethod
+    async def get_team_knowledge(
+        page: int = 1, size: int = 10,
+    ) -> tuple[list[KnowledgeEntry], int]:
+        return await KnowledgeController.get_list(
+            scope="team", page=page, size=size,
+        )
+
+    @staticmethod
+    async def get_project_knowledge(
+        project_id: int, page: int = 1, size: int = 10,
+    ) -> tuple[list[KnowledgeEntry], int]:
+        return await KnowledgeController.get_list(
+            project_id=project_id, page=page, size=size,
+        )
 
     @staticmethod
     async def search(q: str) -> list[KnowledgeEntry]:

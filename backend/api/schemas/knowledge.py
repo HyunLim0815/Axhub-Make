@@ -15,6 +15,8 @@ class KnowledgeEntryCreate(BaseModel):
     content: str = Field(..., min_length=1)
     tags: list[str] = []
     source: str = ""
+    scope: str = Field("project", pattern="^(project|team)$")
+    project_id: Optional[int] = None
 
 
 class KnowledgeEntryUpdate(BaseModel):
@@ -23,6 +25,7 @@ class KnowledgeEntryUpdate(BaseModel):
     content: Optional[str] = Field(None, min_length=1)
     tags: Optional[list[str]] = None
     source: Optional[str] = None
+    scope: Optional[str] = Field(None, pattern="^(project|team)$")
 
 
 class KnowledgeEntryResponse(BaseModel):
@@ -32,6 +35,8 @@ class KnowledgeEntryResponse(BaseModel):
     content: str
     tags: list[str]
     source: str
+    scope: str = "project"
+    project_id: Optional[int] = None
     create_time: datetime
     update_time: datetime
 
