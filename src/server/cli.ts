@@ -21,9 +21,12 @@ export interface MakeServerCliOptions {
   axhubOnlineBaseUrl?: string;
 }
 
-export const CLI_USAGE = `Usage: axhub-make [options]
+export const CLI_USAGE = `Usage: axhub-make [command] [options]
 
-Options:
+Commands:
+  scan [project-dir]       Scan a frontend project and import pages into Make.
+
+Server options (default command):
   --port <port>              Server port. Defaults to ${DEFAULT_MAKE_SERVER_PORT}.
   --host <host>              Server host. Defaults to all interfaces.
   --runtime-origin <origin>  Runtime server origin.
@@ -213,6 +216,13 @@ export function parseCliArgs(args: string[], cwd = process.cwd()): MakeServerCli
 }
 
 export async function runCli(args = process.argv.slice(2)): Promise<void> {
+  // 子命令分发
+  if (args[0] === 'scan') {
+    const { runScanCommand } = await import('../cli/scan.ts');
+    await runScanCommand(args.slice(1));
+    return;
+  }
+
   const options = parseCliArgs(args);
   if (options.help) {
     console.log(CLI_USAGE.trimEnd());
