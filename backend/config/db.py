@@ -41,6 +41,12 @@ class DatabaseSettings(BaseSettings):
     API_KEY: str = "axhub-dev-key"
     CORS_ORIGINS: list[str] = ["*"]
 
+    # 数据存储
+    DATA_DIR: str = "data"
+
+    # 访问控制
+    ACCESS_PASSWORD: str = ""
+
     # 日志
     LOG_LEVEL: str = "INFO"
 

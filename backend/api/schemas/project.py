@@ -5,6 +5,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from api.responses.Base import ORMModel
+
 
 class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -16,7 +18,7 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
 
 
-class ProjectResponse(BaseModel):
+class ProjectResponse(ORMModel):
     id: int
     name: str
     description: str

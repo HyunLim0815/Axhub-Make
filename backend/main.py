@@ -147,7 +147,24 @@ async def health_detailed() -> dict:
 
 # ── 路由注册 ──
 
-from api.router.v1 import annotations, knowledge, projects, prototypes, publish, ai
+from api.router.v1 import (
+    annotations,
+    knowledge,
+    projects,
+    prototypes,
+    publish,
+    ai,
+    ai_runtime,
+    file_ops,
+    media,
+    docs,
+    template_library,
+    git,
+    html_review,
+    review_reports,
+    access,
+    cloud_publish,
+)
 
 app.include_router(projects.router)
 app.include_router(prototypes.router)
@@ -155,3 +172,19 @@ app.include_router(annotations.router)
 app.include_router(knowledge.router)
 app.include_router(publish.router)
 app.include_router(ai.router)
+app.include_router(ai_runtime.router)
+app.include_router(file_ops.router)
+app.include_router(media.router)
+app.include_router(docs.router)
+app.include_router(template_library.router)
+app.include_router(git.router)
+app.include_router(html_review.router)
+app.include_router(review_reports.router)
+app.include_router(access.router)
+app.include_router(cloud_publish.config_router)
+app.include_router(cloud_publish.axhub_router)
+
+# WebSocket 桥接（Canvas / Preview / MCP）
+from api.websocket import router as websocket_router
+
+app.include_router(websocket_router)

@@ -7,7 +7,7 @@ dependencies = [
     "fastapi>=0.115.6",
     "uvicorn[standard]>=0.34.0",
     "gunicorn>=23.0.0",
-    "tortoise-orm>=0.25.0",
+    "tortoise-orm>=1.0.0",
     "asyncpg>=0.30.0",
     "aerich>=0.8.0",
     "pydantic-settings>=2.14.2",
@@ -54,3 +54,9 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# pytest-asyncio 1.x: 所有 async fixture 与测试共享 session 级 event loop，
+# 避免 Tortoise ORM 连接在不同 loop 间切换导致挂起
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+# 若测试挂起，faulthandler 在超时后 dump 堆栈而不是无限等待
+faulthandler_timeout = 60

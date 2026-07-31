@@ -13,6 +13,7 @@
           <el-menu-item index="/"><el-icon><Odometer /></el-icon>项目</el-menu-item>
           <el-menu-item index="/prototypes"><el-icon><Document /></el-icon>原型</el-menu-item>
           <el-menu-item index="/knowledge"><el-icon><Notebook /></el-icon>知识库</el-menu-item>
+          <el-menu-item index="/reports"><el-icon><DocumentChecked /></el-icon>审查报告</el-menu-item>
           <el-menu-item index="/publish"><el-icon><Promotion /></el-icon>发布</el-menu-item>
           <el-menu-item index="/ai"><el-icon><ChatLineSquare /></el-icon>AI 助手</el-menu-item>
         </el-menu>
@@ -37,7 +38,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
-import { Moon, Sunny, Odometer, Document, Notebook, Promotion, ChatLineSquare, Setting } from '@element-plus/icons-vue'
+import { Moon, Sunny, Odometer, Document, Notebook, Promotion, ChatLineSquare, Setting, DocumentChecked } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

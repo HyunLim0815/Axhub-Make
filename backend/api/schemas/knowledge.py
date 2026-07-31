@@ -5,6 +5,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from api.responses.Base import ORMModel
+
 # 知识条目类型枚举
 ENTRY_TYPES = ["term", "decision", "constraint", "user-feedback", "design-rule"]
 
@@ -28,7 +30,7 @@ class KnowledgeEntryUpdate(BaseModel):
     scope: Optional[str] = Field(None, pattern="^(project|team)$")
 
 
-class KnowledgeEntryResponse(BaseModel):
+class KnowledgeEntryResponse(ORMModel):
     id: int
     type: str
     title: str

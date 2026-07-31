@@ -5,6 +5,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
+from api.responses.Base import ORMModel
+
 
 class PrototypeCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -19,7 +21,7 @@ class PrototypeUpdate(BaseModel):
     canvas_data: Optional[dict[str, Any]] = None
 
 
-class PrototypeResponse(BaseModel):
+class PrototypeResponse(ORMModel):
     id: int
     name: str
     description: str

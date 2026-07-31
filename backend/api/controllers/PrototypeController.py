@@ -37,6 +37,17 @@ class PrototypeController:
         return list(prototypes), total
 
     @staticmethod
+    async def get_list_by_project(
+        project_id: int,
+        page: int = 1,
+        size: int = 10,
+    ) -> tuple[list[Prototype], int]:
+        """获取指定项目下的原型列表（项目内原型嵌套）"""
+        return await PrototypeController.get_list(
+            project_id=project_id, page=page, size=size
+        )
+
+    @staticmethod
     async def update(id_: int, data: dict[str, Any]) -> Prototype | None:
         prototype = await Prototype.get_by_id(id_)
         if not prototype:

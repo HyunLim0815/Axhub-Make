@@ -7,11 +7,20 @@
 - PageParams: 分页请求参数
 """
 
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
+
+
+class ORMModel(BaseModel):
+    """ORM 响应基类 — 允许从 Tortoise ORM 对象直接验证
+
+    所有 Response schema 应继承此类，以支持 model_validate(orm_obj)。
+    """
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ApiResponse(BaseModel):
@@ -19,7 +28,7 @@ class ApiResponse(BaseModel):
 
     code: int = Field(200, description="状态码")
     message: str = Field("success", description="响应消息")
-    data: Optional[dict | list] = Field(None, description="响应数据")
+    data: Optional[Any] = Field(None, description="响应数据")
 
 
 class PageParams(BaseModel):

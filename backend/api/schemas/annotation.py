@@ -5,6 +5,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
+from api.responses.Base import ORMModel
+
 
 class AnnotationCreate(BaseModel):
     prototype_id: int
@@ -27,7 +29,7 @@ class AnnotationUpdate(BaseModel):
     status: Optional[str] = None
 
 
-class AnnotationResponse(BaseModel):
+class AnnotationResponse(ORMModel):
     id: int
     prototype_id: int
     title: str
@@ -50,7 +52,7 @@ class AnnotationVersionCreate(BaseModel):
     tags: list[str] = []
 
 
-class AnnotationVersionResponse(BaseModel):
+class AnnotationVersionResponse(ORMModel):
     id: int
     prototype_id: int
     version: int

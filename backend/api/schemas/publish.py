@@ -5,6 +5,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from api.responses.Base import ORMModel
+
 
 class ChannelUpdate(BaseModel):
     name: Optional[str] = None
@@ -16,7 +18,7 @@ class DeployCreate(BaseModel):
     summary: str = ""
 
 
-class ChannelResponse(BaseModel):
+class ChannelResponse(ORMModel):
     id: int
     name: str
     type: str
@@ -28,7 +30,7 @@ class ChannelResponse(BaseModel):
     update_time: datetime
 
 
-class PublishRecordResponse(BaseModel):
+class PublishRecordResponse(ORMModel):
     id: int
     channel_id: int
     version: int
@@ -37,7 +39,7 @@ class PublishRecordResponse(BaseModel):
     create_time: datetime
 
 
-class DashboardResponse(BaseModel):
+class DashboardResponse(ORMModel):
     channels: list[ChannelResponse]
     latest_records: list[PublishRecordResponse]
     total_deploys: int

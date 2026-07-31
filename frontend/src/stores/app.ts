@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { darkTheme } from 'element-plus'
+import { ref } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   const darkMode = ref(localStorage.getItem('axhub_dark') === 'true')
